@@ -14,6 +14,30 @@ function digitsOnly(string $value): string
     return preg_replace('/\D+/', '', $value) ?? '';
 }
 
+function seedDashboardData(PDO $pdo, int $userId): void
+{
+    $courses = $pdo->query('SELECT id, name FROM courses ORDER BY id ASC LIMIT 3')->fetchAll();
+    $progressByCourse = [
+        'Banco de Dados SQL' => 0,
+        'Git e GitHub' => 0,
+        'Python do Zero' => 50,
+    ];
+
+    $courseStmt = $pdo->prepare('INSERT IGNORE INTO user_courses (user_id, course_id, progress) VALUES (:user_id, :course_id, :progress)');
+    foreach ($courses as $course) {
+        $name = (string)($course['name'] ?? '');
+        $courseStmt->execute([
+            ':user_id' => $userId,
+            ':course_id' => (int)$course['id'],
+            ':progress' => (int)($progressByCourse[$name] ?? 0),
+        ]);
+    }
+
+    $skillStmt = $pdo->prepare('INSERT IGNORE INTO user_skills (user_id, name, level) VALUES (:user_id, :name, :level)');
+    $skillStmt->execute([':user_id' => $userId, ':name' => 'Organizacao', ':level' => 1]);
+    $skillStmt->execute([':user_id' => $userId, ':name' => 'Pensamento Logico', ':level' => 2]);
+}
+
 $errors = [];
 $old = [
     'name' => '',
@@ -74,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (count($errors) === 0) {
         try {
             $pdo = dbConnect();
+            $pdo->beginTransaction();
             $sql = 'INSERT INTO users (name, email, phone, cep, street, number, complement, neighborhood, city, state)
                     VALUES (:name, :email, :phone, :cep, :street, :number, :complement, :neighborhood, :city, :state)';
 
@@ -91,8 +116,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':state' => strtoupper($old['state']),
             ]);
 
+            $userId = (int)$pdo->lastInsertId();
+            seedDashboardData($pdo, $userId);
+            $pdo->commit();
+
             $_SESSION['auth_user'] = [
-                'id' => (int)$pdo->lastInsertId(),
+                'id' => $userId,
                 'name' => $old['name'],
                 'email' => $old['email'],
             ];
@@ -100,12 +129,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: ../home/home.php');
             exit;
         } catch (PDOException $e) {
+            if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             if ($e->getCode() === '23000') {
                 $errors[] = 'Este e-mail ja esta cadastrado.';
             } else {
                 $errors[] = 'Erro ao salvar cadastro. Execute as migrations em migrations/run.php.';
             }
         } catch (Throwable $e) {
+            if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $errors[] = 'Falha inesperada ao processar cadastro.';
         }
     }
