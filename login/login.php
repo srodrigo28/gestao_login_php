@@ -1,129 +1,63 @@
-<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
-<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-<!------ Include the above in your HEAD tag ---------->
-<!DOCTYPE html>
-<html>
-    
+<?php
+declare(strict_types=1);
+
+session_start();
+$isLogged = isset($_SESSION['auth_user']) && is_array($_SESSION['auth_user']);
+$studentHref = $isLogged ? 'home/home.php' : 'login-cad/cadastro.php';
+?>
+<!doctype html>
+<html lang="pt-BR">
 <head>
-	<title>Login</title>
-	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css">
-	<link rel="stylesheet" href="/login/login.css">
-	<style>
-
-		/* Coded with love by Mutiullah Samim */
-		body,
-    html {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        background: #60a3bc !important;
-    }
-    .user_card {
-        height: 400px;
-        width: 350px;
-        margin-top: auto;
-        margin-bottom: auto;
-        background: #f39c12;
-        position: relative;
-        display: flex;
-        justify-content: center;
-        flex-direction: column;
-        padding: 10px;
-        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
-        -webkit-box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
-        -moz-box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
-        border-radius: 5px;
-
-    }
-    .brand_logo_container {
-        position: absolute;
-        height: 170px;
-        width: 170px;
-        top: -75px;
-        border-radius: 50%;
-        background: #60a3bc;
-        padding: 10px;
-        text-align: center;
-    }
-    .brand_logo {
-        height: 150px;
-        width: 150px;
-        border-radius: 50%;
-        border: 2px solid white;
-    }
-    .form_container {
-        margin-top: 100px;
-    }
-    .login_btn {
-        width: 100px;
-        background: #c0392b !important;
-        color: white !important;
-    }
-    .login_btn:focus {
-        box-shadow: none !important;
-        outline: 0px !important;
-    }
-    .login_container {
-        padding: 0 2rem;
-    }
-    .input-group-text {
-        background: #c0392b !important;
-        color: white !important;
-        border: 0 !important;
-        border-radius: 0.25rem 0 0 0.25rem !important;
-    }
-    .input_user,
-    .input_pass:focus {
-        box-shadow: none !important;
-        outline: 0px !important;
-    }
-    .custom-checkbox .custom-control-input:checked~.custom-control-label::before {
-        background-color: #c0392b !important;
-    }
-
-
-	</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduPortal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="login/login.css">
 </head>
-<!--Coded with love by Mutiullah Samim-->
 <body>
-	<div class="container h-100">
-		<div class="d-flex justify-content-center h-100">
-			<div class="user_card">
-				<div class="d-flex justify-content-center">
-					<div class="brand_logo_container">
-						<img src="https://cdn.freebiesupply.com/logos/large/2x/pinterest-circle-logo-png-transparent.png" class="brand_logo" alt="Logo">
-					</div>
-				</div>
-				<div class="d-flex justify-content-center form_container">
-					<form>
-						<div class="input-group mb-3">
-							<div class="input-group-append">
-								<span class="input-group-text"><i class="fas fa-user"></i></span>
-							</div>
-							<input type="text" name="" class="form-control input_user" value="" placeholder="E-mail">
-						</div>
-						<div class="input-group mb-2">
-							<div class="input-group-append">
-								<span class="input-group-text"><i class="fas fa-key"></i></span>
-							</div>
-							<input type="password" name="" class="form-control input_pass" value="" placeholder="***********">
-						</div>
-						<div class="d-flex justify-content-center mt-3 login_container">
-							<a href="login-gestao/gestao.php">
-								<button type="button" name="button" class="btn login_btn mr-2">Login</button>
-							</a>
-							<a href="login-cad/cadastro.php">
-								<button type="button" name="button" class="btn login_btn">Cadastrar</button>
-							</a>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-	</div>
+    <main class="landing">
+        <header>
+            <div class="logo">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <h1>EduPortal</h1>
+            <p>Plataforma de Estudos Online</p>
+        </header>
+
+        <section class="cards">
+            <article class="card student">
+                <div class="tag">Portal do Aluno</div>
+                <h2>Area do Estudante</h2>
+                <p>Acesse seus cursos, acompanhe atividades e evolua no seu aprendizado.</p>
+                <ul>
+                    <li><i class="fa-solid fa-circle-play"></i> Cursos e conteudos</li>
+                    <li><i class="fa-regular fa-calendar"></i> Agenda semanal</li>
+                    <li><i class="fa-solid fa-list-check"></i> Atividades e tarefas</li>
+                    <li><i class="fa-solid fa-id-card"></i> Curriculo digital</li>
+                </ul>
+                <a class="btn primary" href="<?= htmlspecialchars($studentHref, ENT_QUOTES, 'UTF-8') ?>"><i class="fa-solid fa-right-to-bracket"></i> Entrar como Aluno</a>
+                <a class="btn ghost" href="login-cad/cadastro.php"><i class="fa-solid fa-user-plus"></i> Criar conta gratis</a>
+            </article>
+
+            <article class="card admin">
+                <div class="tag">Acesso Restrito</div>
+                <h2>Administracao</h2>
+                <p>Painel administrativo para gerenciar alunos, cursos e progresso geral.</p>
+                <ul>
+                    <li><i class="fa-solid fa-users"></i> Gerenciar alunos</li>
+                    <li><i class="fa-solid fa-book"></i> Gerenciar cursos</li>
+                    <li><i class="fa-solid fa-star"></i> Catalogo de habilidades</li>
+                    <li><i class="fa-solid fa-chart-line"></i> Visao geral do sistema</li>
+                </ul>
+                <a class="btn primary blue" href="login-gestao/gestao.php"><i class="fa-solid fa-lock"></i> Acesso Administrativo</a>
+                <small>Acesso restrito a administradores autorizados</small>
+            </article>
+        </section>
+
+        <footer>© 2026 EduPortal - Todos os direitos reservados</footer>
+    </main>
 </body>
 </html>
