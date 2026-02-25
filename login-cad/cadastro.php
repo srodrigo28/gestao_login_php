@@ -1,64 +1,325 @@
-<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
-<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-<!------ Include the above in your HEAD tag ---------->
-<!DOCTYPE html>
-<html>
-    
+<?php
+declare(strict_types=1);
+
+session_start();
+require_once __DIR__ . '/../config/database.php';
+
+function h(string $value): string
+{
+    return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+}
+
+function digitsOnly(string $value): string
+{
+    return preg_replace('/\D+/', '', $value) ?? '';
+}
+
+$errors = [];
+$old = [
+    'name' => '',
+    'email' => '',
+    'phone' => '',
+    'cep' => '',
+    'street' => '',
+    'number' => '',
+    'complement' => '',
+    'neighborhood' => '',
+    'city' => '',
+    'state' => '',
+];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    foreach ($old as $field => $default) {
+        $old[$field] = trim((string)($_POST[$field] ?? ''));
+    }
+
+    if (mb_strlen($old['name']) < 3) {
+        $errors[] = 'Informe um nome valido com pelo menos 3 caracteres.';
+    }
+
+    if (!filter_var($old['email'], FILTER_VALIDATE_EMAIL)) {
+        $errors[] = 'Informe um e-mail valido.';
+    }
+
+    $phoneDigits = digitsOnly($old['phone']);
+    if (strlen($phoneDigits) < 10 || strlen($phoneDigits) > 11) {
+        $errors[] = 'Informe um telefone valido.';
+    }
+
+    $cepDigits = digitsOnly($old['cep']);
+    if (strlen($cepDigits) !== 8) {
+        $errors[] = 'Informe um CEP valido.';
+    }
+
+    if ($old['street'] === '') {
+        $errors[] = 'Informe a rua/logradouro.';
+    }
+
+    if ($old['number'] === '') {
+        $errors[] = 'Informe o numero.';
+    }
+
+    if ($old['neighborhood'] === '') {
+        $errors[] = 'Informe o bairro.';
+    }
+
+    if ($old['city'] === '') {
+        $errors[] = 'Informe a cidade.';
+    }
+
+    if (!preg_match('/^[A-Za-z]{2}$/', $old['state'])) {
+        $errors[] = 'Informe o estado com 2 letras.';
+    }
+
+    if (count($errors) === 0) {
+        try {
+            $pdo = dbConnect();
+            $sql = 'INSERT INTO users (name, email, phone, cep, street, number, complement, neighborhood, city, state)
+                    VALUES (:name, :email, :phone, :cep, :street, :number, :complement, :neighborhood, :city, :state)';
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                ':name' => $old['name'],
+                ':email' => $old['email'],
+                ':phone' => $old['phone'],
+                ':cep' => $old['cep'],
+                ':street' => $old['street'],
+                ':number' => $old['number'],
+                ':complement' => $old['complement'],
+                ':neighborhood' => $old['neighborhood'],
+                ':city' => $old['city'],
+                ':state' => strtoupper($old['state']),
+            ]);
+
+            $_SESSION['auth_user'] = [
+                'id' => (int)$pdo->lastInsertId(),
+                'name' => $old['name'],
+                'email' => $old['email'],
+            ];
+
+            header('Location: ../home/home.php');
+            exit;
+        } catch (PDOException $e) {
+            if ($e->getCode() === '23000') {
+                $errors[] = 'Este e-mail ja esta cadastrado.';
+            } else {
+                $errors[] = 'Erro ao salvar cadastro. Execute as migrations em migrations/run.php.';
+            }
+        } catch (Throwable $e) {
+            $errors[] = 'Falha inesperada ao processar cadastro.';
+        }
+    }
+}
+?>
+<!doctype html>
+<html lang="pt-BR">
 <head>
-	<title>Cadastro</title>
-	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css">
-	<link rel="stylesheet" href="cadastro.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro | EduPortal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="./cadastro.css">
 </head>
-<!--Coded with love by Mutiullah Samim-->
 <body>
-	<div class="container h-100">
-		<div class="d-flex justify-content-center h-100">
-			<div class="user_card">
-				<div class="d-flex justify-content-center">
-						<h1 class="mt-4 text-light mb-4">Cadastro</h1>
-				</div>
-				<div class="d-flex justify-content-center">
-					<form>
-						<div class="input-group mb-3">
-							<div class="input-group-append">
-								<span class="input-group-text"><i class="fas fa-user"></i></span>
-							</div>
-							<input type="text" class="form-control input_user" placeholder="Nome Completo">
-						</div>
-                        <div class="input-group mb-3">
-							<div class="input-group-append">
-								<span class="input-group-text"><i class="fas fa-user"></i></span>
-							</div>
-							<input type="text" class="form-control input_user" placeholder="E-mail">
-						</div>
-						<div class="input-group mb-2">
-							<div class="input-group-append">
-								<span class="input-group-text"><i class="fas fa-key"></i></span>
-							</div>
-							<input type="password" name="" class="form-control input_pass" value="" placeholder="***********">
-						</div>
-                        <div class="input-group mb-2">
-							<div class="input-group-append">
-								<span class="input-group-text"><i class="fas fa-key"></i></span>
-							</div>
-							<input type="password" name="" class="form-control input_pass" value="" placeholder="***********">
-						</div>
-                        <div class="d-flex justify-content-center mt-3 login_container">
-							<a href="../index.php">
-								<button type="button" name="button" class="btn btn-primary login_btn mr-2">Cadastro</button>
-							</a>
-							<a href="../index.php">
-								<button type="button" name="button" class="btn btn-danger login_btn">Cancelar</button>
-							</a>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-	</div>
+    <main class="register-page">
+        <section class="register-header">
+            <div class="logo-badge"><i class="fa-solid fa-graduation-cap"></i></div>
+            <h1>EduPortal</h1>
+            <p>Crie sua conta gratuita</p>
+        </section>
+
+        <section class="stepper">
+            <div class="step done">
+                <span><i class="fa-solid fa-check"></i></span>
+                <small>Conta</small>
+            </div>
+            <div class="step-line"></div>
+            <div class="step done">
+                <span><i class="fa-solid fa-check"></i></span>
+                <small>Perfil</small>
+            </div>
+            <div class="step-line"></div>
+            <div class="step current">
+                <span>3</span>
+                <small>Endereco</small>
+            </div>
+        </section>
+
+        <section class="register-card">
+            <header>
+                <h2>Cadastro</h2>
+                <p>Informe seus dados para criar sua conta.</p>
+            </header>
+
+            <?php if (count($errors) > 0): ?>
+                <div class="alert error">
+                    <ul>
+                        <?php foreach ($errors as $error): ?>
+                            <li><?= h($error) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+
+            <form id="register-form" method="post" novalidate>
+                <div class="field-grid two">
+                    <label>
+                        Nome completo
+                        <input type="text" name="name" id="name" value="<?= h($old['name']) ?>" required>
+                    </label>
+                    <label>
+                        E-mail
+                        <input type="email" name="email" id="email" value="<?= h($old['email']) ?>" required>
+                    </label>
+                </div>
+
+                <div class="field-grid one">
+                    <label>
+                        Telefone
+                        <input type="text" name="phone" id="phone" value="<?= h($old['phone']) ?>" placeholder="(00) 00000-0000" required>
+                    </label>
+                </div>
+
+                <div class="field-grid one">
+                    <label>
+                        CEP
+                        <div class="inline-input">
+                            <input type="text" name="cep" id="cep" value="<?= h($old['cep']) ?>" placeholder="00000-000" required>
+                            <button type="button" id="buscar-cep"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+                        </div>
+                    </label>
+                    <p class="cep-feedback" id="cep-feedback"></p>
+                </div>
+
+                <div class="field-grid two">
+                    <label>
+                        Rua / Logradouro
+                        <input type="text" name="street" id="street" value="<?= h($old['street']) ?>" required>
+                    </label>
+                    <label>
+                        Numero
+                        <input type="text" name="number" id="number" value="<?= h($old['number']) ?>" required>
+                    </label>
+                </div>
+
+                <div class="field-grid two">
+                    <label>
+                        Complemento
+                        <input type="text" name="complement" id="complement" value="<?= h($old['complement']) ?>">
+                    </label>
+                    <label>
+                        Bairro
+                        <input type="text" name="neighborhood" id="neighborhood" value="<?= h($old['neighborhood']) ?>" required>
+                    </label>
+                </div>
+
+                <div class="field-grid two">
+                    <label>
+                        Cidade
+                        <input type="text" name="city" id="city" value="<?= h($old['city']) ?>" required>
+                    </label>
+                    <label>
+                        Estado (UF)
+                        <input type="text" name="state" id="state" maxlength="2" value="<?= h($old['state']) ?>" required>
+                    </label>
+                </div>
+
+                <div class="actions">
+                    <a class="btn secondary" href="../index.php"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
+                    <button class="btn primary" type="submit"><i class="fa-solid fa-check"></i> Criar conta</button>
+                </div>
+            </form>
+        </section>
+
+        <p class="footer-link">Ja tem conta? <a href="../index.php">Entrar</a></p>
+    </main>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+    <script>
+        (function () {
+            const $form = $('#register-form');
+            const $feedback = $('#cep-feedback');
+
+            $('#phone').mask('(00) 00000-0000');
+            $('#cep').mask('00000-000');
+            $('#state').on('input', function () {
+                this.value = this.value.replace(/[^a-zA-Z]/g, '').toUpperCase();
+            });
+
+            function digitsOnly(value) {
+                return value.replace(/\D/g, '');
+            }
+
+            function showFeedback(message, isError) {
+                $feedback.text(message || '');
+                $feedback.toggleClass('error', !!isError);
+                $feedback.toggleClass('ok', !isError && !!message);
+            }
+
+            function validateClient() {
+                const errors = [];
+                const name = $('#name').val().trim();
+                const email = $('#email').val().trim();
+                const phone = digitsOnly($('#phone').val());
+                const cep = digitsOnly($('#cep').val());
+                const street = $('#street').val().trim();
+                const number = $('#number').val().trim();
+                const neighborhood = $('#neighborhood').val().trim();
+                const city = $('#city').val().trim();
+                const state = $('#state').val().trim();
+
+                if (name.length < 3) errors.push('Nome precisa ter pelo menos 3 caracteres.');
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('E-mail invalido.');
+                if (phone.length < 10 || phone.length > 11) errors.push('Telefone invalido.');
+                if (cep.length !== 8) errors.push('CEP invalido.');
+                if (!street) errors.push('Rua/Logradouro e obrigatorio.');
+                if (!number) errors.push('Numero e obrigatorio.');
+                if (!neighborhood) errors.push('Bairro e obrigatorio.');
+                if (!city) errors.push('Cidade e obrigatoria.');
+                if (!/^[A-Za-z]{2}$/.test(state)) errors.push('Estado precisa ter 2 letras.');
+
+                return errors;
+            }
+
+            $('#buscar-cep').on('click', function () {
+                const cep = digitsOnly($('#cep').val());
+                if (cep.length !== 8) {
+                    showFeedback('Informe um CEP valido para buscar.', true);
+                    return;
+                }
+
+                showFeedback('Buscando endereco...', false);
+
+                $.getJSON('https://viacep.com.br/ws/' + cep + '/json/')
+                    .done(function (data) {
+                        if (data.erro) {
+                            showFeedback('CEP nao encontrado.', true);
+                            return;
+                        }
+
+                        $('#street').val(data.logradouro || '');
+                        $('#neighborhood').val(data.bairro || '');
+                        $('#city').val(data.localidade || '');
+                        $('#state').val((data.uf || '').toUpperCase());
+                        showFeedback('Endereco encontrado!', false);
+                    })
+                    .fail(function () {
+                        showFeedback('Falha ao consultar CEP. Tente novamente.', true);
+                    });
+            });
+
+            $form.on('submit', function (event) {
+                const errors = validateClient();
+                if (errors.length > 0) {
+                    event.preventDefault();
+                    alert(errors.join('\n'));
+                }
+            });
+        })();
+    </script>
 </body>
 </html>
