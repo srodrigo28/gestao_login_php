@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
 
-session_start();
+require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/database.php';
+startAppSession();
 
 function h(string $value): string
 {
@@ -12,6 +13,69 @@ function h(string $value): string
 function digitsOnly(string $value): string
 {
     return preg_replace('/\D+/', '', $value) ?? '';
+}
+
+function ensureSchema(PDO $pdo): void
+{
+    $statements = [
+        "CREATE TABLE IF NOT EXISTS users (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(120) NOT NULL,
+            email VARCHAR(190) NOT NULL UNIQUE,
+            phone VARCHAR(20) NOT NULL,
+            cep VARCHAR(9) NULL,
+            street VARCHAR(180) NULL,
+            number VARCHAR(20) NULL,
+            complement VARCHAR(120) NULL,
+            neighborhood VARCHAR(120) NULL,
+            city VARCHAR(120) NULL,
+            state CHAR(2) NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS courses (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(120) NOT NULL UNIQUE,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS user_courses (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            user_id INT UNSIGNED NOT NULL,
+            course_id INT UNSIGNED NOT NULL,
+            progress TINYINT UNSIGNED NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_user_course (user_id, course_id),
+            CONSTRAINT fk_user_courses_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            CONSTRAINT fk_user_courses_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS activities (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            user_id INT UNSIGNED NOT NULL,
+            title VARCHAR(190) NOT NULL,
+            due_date DATE NULL,
+            status ENUM('pending', 'done') NOT NULL DEFAULT 'pending',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_activities_user_status (user_id, status),
+            CONSTRAINT fk_activities_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS user_skills (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            user_id INT UNSIGNED NOT NULL,
+            name VARCHAR(120) NOT NULL,
+            level TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_user_skill (user_id, name),
+            CONSTRAINT fk_user_skills_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "INSERT IGNORE INTO courses (name) VALUES
+            ('Banco de Dados SQL'),
+            ('Git e GitHub'),
+            ('Python do Zero')",
+    ];
+
+    foreach ($statements as $sql) {
+        $pdo->exec($sql);
+    }
 }
 
 function seedDashboardData(PDO $pdo, int $userId): void
@@ -98,6 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (count($errors) === 0) {
         try {
             $pdo = dbConnect();
+            ensureSchema($pdo);
             $pdo->beginTransaction();
             $sql = 'INSERT INTO users (name, email, phone, cep, street, number, complement, neighborhood, city, state)
                     VALUES (:name, :email, :phone, :cep, :street, :number, :complement, :neighborhood, :city, :state)';
